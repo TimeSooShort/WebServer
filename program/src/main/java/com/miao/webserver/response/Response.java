@@ -12,6 +12,7 @@ import java.util.List;
 import static com.miao.webserver.common.Constants.DEFAULT_CONTENT_TYPE;
 import static com.miao.webserver.common.Constants.BLANK;
 import static com.miao.webserver.common.Constants.CRLF;
+import static com.miao.webserver.common.Constants.UTF_8_CHARSET;
 
 @Slf4j
 public class Response {
@@ -70,14 +71,6 @@ public class Response {
     }
 
     /**
-     * 构建响应
-     */
-    private void buildResponse() {
-        buildHeader();
-        buildBody();
-    }
-
-    /**
      * 构建响应头
      */
     private void buildHeader() {
@@ -99,12 +92,19 @@ public class Response {
                         .append("=").append(cookie.getValue()).append(CRLF);
             }
         }
+        headerBuilder.append("Content-Length:").append(BLANK).append(body.length).append(CRLF).append(CRLF);
     }
 
     /**
-     * 构建响应实体
+     * 返回完整Response的byte[]
+     * @return
      */
-    private void buildBody() {
-        this.headerBuilder.append(CRLF).append(Arrays.toString(this.body)).append(CRLF);
+    public byte[] getResponseBytes() {
+        buildHeader();
+        byte[] header = headerBuilder.toString().getBytes(UTF_8_CHARSET);
+        byte[] response = new byte[header.length + body.length];
+        System.arraycopy(header, 0, response, 0, header.length);
+        System.arraycopy(body, 0, response, header.length, body.length);
+        return response;
     }
 }

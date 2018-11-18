@@ -28,4 +28,9 @@ public class Constants {
             return code;
         }
     }
+
+    public interface ContextConstant {
+        String DEFAULT_SERVLET_NAME = "DefaultServlet";
+        String ERROR_PAGE = "errors/%s.html";
+    }
 }

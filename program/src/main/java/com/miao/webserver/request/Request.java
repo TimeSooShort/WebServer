@@ -5,6 +5,7 @@ import com.miao.webserver.common.RequestMethod;
 import com.miao.webserver.cookie.Cookie;
 import com.miao.webserver.exception.RequestInvalidException;
 import com.miao.webserver.exception.RequestParseException;
+import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
 import java.io.UnsupportedEncodingException;
@@ -16,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 @Slf4j
+@Getter
 public class Request {
 
     private RequestMethod method;

@@ -30,11 +30,13 @@ public class BioConnector implements Runnable {
             Socket socket = null;
             try {
                 socket = server.accept();
-                log.info("client:{}", socket);
-                bioProcessor.doProcess(new BioSocketWrapper(socket));
             } catch (IOException e) {
-                e.printStackTrace();
+                // 出现异常就抛弃本次连接，重新等待下次，
+                // 由于会在循环判断服务器是否被关闭，所以不用担心死循环问题
+                continue;
             }
+            log.info("client:{}", socket);
+            bioProcessor.doProcess(new BioSocketWrapper(socket));
         }
 
     }
