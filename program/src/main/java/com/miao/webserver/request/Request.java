@@ -2,6 +2,7 @@ package com.miao.webserver.request;
 
 import com.miao.webserver.common.Constants;
 import com.miao.webserver.common.RequestMethod;
+import com.miao.webserver.context.WebApplication;
 import com.miao.webserver.cookie.Cookie;
 import com.miao.webserver.exception.RequestInvalidException;
 import com.miao.webserver.exception.RequestParseException;
@@ -51,6 +52,8 @@ public class Request {
             e.printStackTrace();
             throw new RequestParseException();
         }
+        // Request创建成功后触发监听事件
+        WebApplication.getServletContext().afterRequestCreated(this);
     }
 
     /**

@@ -1,9 +1,11 @@
 package com.miao.webserver.core.handler.bio;
 
 import com.miao.webserver.context.ServletContext;
+import com.miao.webserver.context.WebApplication;
 import com.miao.webserver.core.handler.AbstractHandler;
 import com.miao.webserver.core.wrapper.SocketWrapper;
 import com.miao.webserver.core.wrapper.bio.BioSocketWrapper;
+import com.miao.webserver.exception.ServletException;
 import com.miao.webserver.exception.ServletNotFoundException;
 import com.miao.webserver.exception.handler.ExceptionHandler;
 import com.miao.webserver.request.Request;
@@ -21,7 +23,7 @@ public class BioHandler extends AbstractHandler {
 
     public BioHandler(Request request, Response response, SocketWrapper socketWrapper,
                       ServletContext servletContext, ExceptionHandler exceptionHandler)
-            throws ServletNotFoundException {
+            throws ServletException {
         super(request, response, socketWrapper, servletContext, exceptionHandler);
     }
 
@@ -52,5 +54,7 @@ public class BioHandler extends AbstractHandler {
                 e.printStackTrace();
             }
         }
+        // request销毁后触发监听事件
+        servletContext.afterRequestDestroyed(request);
     }
 }

@@ -6,6 +6,11 @@ import com.miao.webserver.exception.FilterNotFoundException;
 import com.miao.webserver.exception.ServletException;
 import com.miao.webserver.exception.ServletNotFoundException;
 import com.miao.webserver.filter.Filter;
+import com.miao.webserver.listener.ServletContextListener;
+import com.miao.webserver.listener.ServletRequestListener;
+import com.miao.webserver.listener.event.ServletContextEvent;
+import com.miao.webserver.listener.event.ServletRequestEvent;
+import com.miao.webserver.request.Request;
 import com.miao.webserver.servlet.Servlet;
 import com.miao.webserver.util.XMLUtil;
 import org.dom4j.Document;
@@ -14,7 +19,6 @@ import org.dom4j.Element;
 import org.springframework.util.AntPathMatcher;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 
 import static com.miao.webserver.common.Constants.ContextConstant.DEFAULT_SERVLET_NAME;
@@ -71,27 +75,39 @@ public class ServletContext {
     private Map<String, FilterHolder> filterNameClass;
 
     /**
+     * 监听器
+     */
+    private List<ServletContextListener> servletContextListeners;
+    private List<ServletRequestListener> servletRequestListenerList;
+
+    /**
      * 利用Spring的路径匹配器
      */
     private AntPathMatcher matcher;
 
-    public ServletContext() throws DocumentException {
+    public ServletContext() throws DocumentException, IllegalAccessException, ClassNotFoundException, InstantiationException {
         init();
     }
 
     /**
      * 初始化
      */
-    private void init() throws DocumentException {
+    private void init() throws DocumentException, IllegalAccessException, InstantiationException, ClassNotFoundException {
         this.servletNameClass = new HashMap<>();
         this.servletMaptUrlName = new HashMap<>();
         this.filterMapUrlName = new HashMap<>();
         this.filterNameClass = new HashMap<>();
+        this.servletContextListeners = new ArrayList<>();
+        this.servletRequestListenerList = new ArrayList<>();
         parseWebXml();
+        ServletContextEvent servletContextEvent = new ServletContextEvent(this);
+        for (ServletContextListener listener : servletContextListeners) {
+            listener.contextInitialized(servletContextEvent);
+        }
     }
 
     /**
-     * 关闭前调用，这里会调用servlet，filter，listener的destroy方法
+     * 应用关闭前调用，这里会调用servlet，filter，servletContextListener的destroy方法
      */
     public void destroy() {
         servletNameClass.values().forEach(servletHolder -> {
@@ -105,12 +121,17 @@ public class ServletContext {
                 filterHolder.getFilter().destroy();
             }
         });
+
+        ServletContextEvent contextEvent = new ServletContextEvent(this);
+        for (ServletContextListener listener : servletContextListeners) {
+            listener.contextDestroyed(contextEvent);
+        }
     }
 
     /**
      * 解析web.xml
      */
-    private void parseWebXml() throws DocumentException {
+    private void parseWebXml() throws DocumentException, ClassNotFoundException, IllegalAccessException, InstantiationException {
         Document document = XMLUtil.getDocument(ServletContext.class.getResourceAsStream("/web.xml"));
         Element root = document.getRootElement();
 
@@ -153,6 +174,19 @@ public class ServletContext {
                     this.filterMapUrlName.put(filterUrl.getText(), nameList);
                 }
                 nameList.add(filterName);
+            }
+        }
+
+        // 解析Listener
+        Element listener = root.element("listener");
+        List<Element> listenerPaths = listener.elements("listener-class");
+        for (Element listenerPath : listenerPaths) {
+            EventListener eventListener = (EventListener) Class.forName(
+                    listenerPath.getText()).newInstance();
+            if (listener instanceof ServletContextListener) {
+                this.servletContextListeners.add((ServletContextListener) eventListener);
+            } else if (listener instanceof ServletRequestListener) {
+                this.servletRequestListenerList.add((ServletRequestListener) eventListener);
             }
         }
     }
@@ -272,5 +306,27 @@ public class ServletContext {
             }
         }
         return filter;
+    }
+
+    /**
+     * Request创建后触发ServletRequestListener的requestInitialized方法
+     * @param request
+     */
+    public void afterRequestCreated(Request request) {
+        ServletRequestEvent event = new ServletRequestEvent(request);
+        for (ServletRequestListener listener : servletRequestListenerList) {
+            listener.requestInitialized(event);
+        }
+    }
+
+    /**
+     * Request销毁后触发ServletRequestListener的requestDestroyed方法
+     * @param request
+     */
+    public void afterRequestDestroyed(Request request) {
+        ServletRequestEvent event = new ServletRequestEvent(request);
+        for (ServletRequestListener listener : servletRequestListenerList) {
+            listener.requestDestroyed(event);
+        }
     }
 }
