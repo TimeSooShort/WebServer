@@ -1,11 +1,16 @@
 package com.miao.webserver.request;
 
+import com.miao.webserver.Session.HttpSession;
+import com.miao.webserver.Session.SessionManager;
 import com.miao.webserver.common.Constants;
 import com.miao.webserver.common.RequestMethod;
+import com.miao.webserver.context.ServletContext;
 import com.miao.webserver.context.WebApplication;
 import com.miao.webserver.cookie.Cookie;
 import com.miao.webserver.exception.RequestInvalidException;
 import com.miao.webserver.exception.RequestParseException;
+import com.miao.webserver.listener.event.HttpSessionEvent;
+import com.miao.webserver.response.Response;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,6 +31,9 @@ public class Request {
     private Map<String, List<String>> params;
     private Map<String, List<String>> headers;
     private Cookie[] cookies;
+    private HttpSession session;
+    private SessionManager manager = SessionManager.getManager();
+    private Response response;
 
     public Request(byte[] data) throws RequestInvalidException, RequestParseException {
         String[] segment = null;
@@ -169,5 +177,39 @@ public class Request {
             log.info("没有Content-Length，尝试解析body字符串中的参数");
             parseParams(body.trim());
         }
+    }
+
+    /**
+     * 获取session，若不存在就创建，并在response添加响应头Set-Cookie:
+     * @param createIfNoExist true则在不存在时创建新的session
+     * @return
+     */
+    public HttpSession getSession(boolean createIfNoExist) {
+        if (session != null) return session;
+        for (Cookie cookie : cookies) {
+            if (cookie.getKey().equals("JSESSIONID")) {
+                HttpSession usrSession = manager.getSession(cookie.getValue());
+                if (usrSession != null) {
+                    session = usrSession;
+                    return session;
+                }
+            }
+        }
+        if (!createIfNoExist) return null;
+        session = manager.createSession();
+        response.addCookie(new Cookie("JSESSIONID", session.getId()));
+        return session;
+    }
+
+    /**
+     * 留客户端程序员获取Session调用
+     * @return
+     */
+    public HttpSession getSession() {
+        return getSession(true);
+    }
+
+    public void setResponse(Response response) {
+        this.response = response;
     }
 }

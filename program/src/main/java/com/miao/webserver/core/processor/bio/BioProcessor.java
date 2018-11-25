@@ -32,8 +32,9 @@ public class BioProcessor extends AbstractProcessor {
             if (len <= 0) {
                 throw new RequestInvalidException(); // exceptionHandler对该异常的处理是关闭socket抛弃该请求
             }
-            request = new Request(buffer);
             response = new Response();
+            request = new Request(buffer);
+            request.setResponse(response);
             pool.execute(new BioHandler(request, response, socketWrapper,
                     servletContext, exceptionHandler));
         } catch (IOException e) {

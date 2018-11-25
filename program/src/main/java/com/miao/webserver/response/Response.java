@@ -4,6 +4,7 @@ import com.miao.webserver.common.Constants.HttpStatus;
 import com.miao.webserver.cookie.Cookie;
 import lombok.extern.slf4j.Slf4j;
 
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Date;
@@ -106,5 +107,15 @@ public class Response {
         System.arraycopy(header, 0, response, 0, header.length);
         System.arraycopy(body, 0, response, header.length, body.length);
         return response;
+    }
+
+    /**
+     * 返回Response响应的ByteBuffer数组
+     * @return
+     */
+    public ByteBuffer getResponseByteBuffer() {
+        buildHeader();
+        byte[] header = this.headerBuilder.toString().getBytes(UTF_8_CHARSET);
+        return ByteBuffer.wrap(header).put(this.body);
     }
 }

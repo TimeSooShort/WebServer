@@ -32,5 +32,6 @@ public class Constants {
     public interface ContextConstant {
         String DEFAULT_SERVLET_NAME = "DefaultServlet";
         String ERROR_PAGE = "errors/%s.html";
+        int DEFAULT_SESSION_EXPIRE_TIME = 30 * 60; // 半小时
     }
 }

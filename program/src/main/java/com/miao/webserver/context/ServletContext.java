@@ -1,13 +1,17 @@
 package com.miao.webserver.context;
 
+import com.miao.webserver.Session.HttpSession;
+import com.miao.webserver.Session.IdleSessionCleaner;
 import com.miao.webserver.context.holder.FilterHolder;
 import com.miao.webserver.context.holder.ServletHolder;
 import com.miao.webserver.exception.FilterNotFoundException;
 import com.miao.webserver.exception.ServletException;
 import com.miao.webserver.exception.ServletNotFoundException;
 import com.miao.webserver.filter.Filter;
+import com.miao.webserver.listener.HttpSessionListener;
 import com.miao.webserver.listener.ServletContextListener;
 import com.miao.webserver.listener.ServletRequestListener;
+import com.miao.webserver.listener.event.HttpSessionEvent;
 import com.miao.webserver.listener.event.ServletContextEvent;
 import com.miao.webserver.listener.event.ServletRequestEvent;
 import com.miao.webserver.request.Request;
@@ -79,6 +83,7 @@ public class ServletContext {
      */
     private List<ServletContextListener> servletContextListeners;
     private List<ServletRequestListener> servletRequestListenerList;
+    private List<HttpSessionListener> httpSessionListenerList;
 
     /**
      * 利用Spring的路径匹配器
@@ -99,6 +104,8 @@ public class ServletContext {
         this.filterNameClass = new HashMap<>();
         this.servletContextListeners = new ArrayList<>();
         this.servletRequestListenerList = new ArrayList<>();
+        this.httpSessionListenerList = new ArrayList<>();
+        new IdleSessionCleaner().start(); // 启动定期清扫过期session线程
         parseWebXml();
         ServletContextEvent servletContextEvent = new ServletContextEvent(this);
         for (ServletContextListener listener : servletContextListeners) {
@@ -122,6 +129,7 @@ public class ServletContext {
             }
         });
 
+        // 应用关闭前触发servletContext监听事件
         ServletContextEvent contextEvent = new ServletContextEvent(this);
         for (ServletContextListener listener : servletContextListeners) {
             listener.contextDestroyed(contextEvent);
@@ -187,6 +195,8 @@ public class ServletContext {
                 this.servletContextListeners.add((ServletContextListener) eventListener);
             } else if (listener instanceof ServletRequestListener) {
                 this.servletRequestListenerList.add((ServletRequestListener) eventListener);
+            } else if (listener instanceof HttpSessionListener) {
+                this.httpSessionListenerList.add((HttpSessionListener) eventListener);
             }
         }
     }
@@ -327,6 +337,28 @@ public class ServletContext {
         ServletRequestEvent event = new ServletRequestEvent(request);
         for (ServletRequestListener listener : servletRequestListenerList) {
             listener.requestDestroyed(event);
+        }
+    }
+
+    /**
+     * 监听session创建事件
+     * @param session
+     */
+    public void afterSessionCreate(HttpSession session) {
+        HttpSessionEvent event = new HttpSessionEvent(session);
+        for (HttpSessionListener listener : httpSessionListenerList) {
+            listener.sessionCreated(event);
+        }
+    }
+
+    /**
+     * 监听session销毁事件
+     * @param session
+     */
+    public void afterSessionDestroyed(HttpSession session) {
+        HttpSessionEvent event = new HttpSessionEvent(session);
+        for (HttpSessionListener listener : httpSessionListenerList) {
+            listener.sessionDestroyed(event);
         }
     }
 }
